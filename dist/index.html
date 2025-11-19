@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Text to Music Converter</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Outfit:wght@400;700&display=swap"
+    rel="stylesheet">
+  <script type="module" crossorigin src="/assets/index-HdXQk8XM.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-C4rSNrLC.css">
+</head>
+
+<body>
+  <div id="app">
+    <header>
+      <h1>Text to Music Converter</h1>
+      <p>テキストを音楽（MML）に変換して再生します</p>
+    </header>
+
+    <main>
+      <div class="input-section">
+        <textarea id="text-input" placeholder="ここにテキストを入力してください（例：青空文庫の文章など）..."></textarea>
+      </div>
+
+      <div class="controls">
+        <button id="play-btn" class="primary-btn">
+          <span class="icon">▶</span> 再生 / 変換
+        </button>
+        <button id="pause-btn" class="secondary-btn" disabled>
+          <span class="icon">⏸</span> 一時停止
+        </button>
+        <button id="stop-btn" class="secondary-btn" disabled>
+          <span class="icon">■</span> 停止
+        </button>
+      </div>
+
+      <div class="output-section">
+        <div class="status-display">
+          <span id="status-text">Ready</span>
+        </div>
+        <div class="visualizer">
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+        </div>
+        <details>
+          <summary>生成されたMMLを見る</summary>
+          <pre id="mml-output"></pre>
+        </details>
+      </div>
+    </main>
+  </div>
+</body>
+
+</html>
