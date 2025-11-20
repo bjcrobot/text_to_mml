@@ -186,3 +186,11 @@ pre {
   0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
   50% { transform: scaleY(1); opacity: 1; }
 }
+
+#sheet-music {
+  background-color: white;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 1rem;
+  overflow-x: auto;
+}

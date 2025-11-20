@@ -22,40 +22,46 @@ export class SheetMusicRenderer {
         const system = vf.System();
 
         const notes: StaveNote[] = [];
+        let totalBeats = 0;
 
         // Map MMLEvents to VexFlow StaveNotes
         events.forEach(event => {
             if (event.type === 'note' && event.pitch && event.duration) {
                 // pitch: "C#4" -> keys: ["c#/4"]
-                // duration: 4 -> "q", 8 -> "8", 16 -> "16"
-                const keys = [event.pitch.replace(/(\w+)(\d+)/, '$1/$2').toLowerCase()];
+                // Regex to match Note + Accidental(optional) + Octave
+                const keys = [event.pitch.replace(/^([a-gA-G][#b]?)(\d+)$/, '$1/$2').toLowerCase()];
                 const duration = String(event.duration);
 
                 notes.push(new StaveNote({ keys: keys, duration: duration }));
+                totalBeats += 4 / event.duration;
             } else if (event.type === 'rest' && event.duration) {
                 // Rest needs a key (usually "b/4") and type "r"
                 const duration = String(event.duration) + "r";
                 notes.push(new StaveNote({ keys: ["b/4"], duration: duration }));
+                totalBeats += 4 / event.duration;
             }
         });
 
         if (notes.length === 0) return;
 
-        // Create a voice
-        const voice = score.voice(notes, { time: '4/4' });
+        // Calculate voice time signature
+        const voiceBeats = Math.ceil(totalBeats);
+        const timeSig = `${voiceBeats}/4`;
 
-        // Disable strict timing to allow arbitrary MML sequences without erroring on measure bounds
+        // Create a voice with the calculated length
+        const voice = score.voice(notes, { time: timeSig });
+
         voice.setStrict(false);
 
         // Add voice to system
         system.addStave({
             voices: [voice]
-        }).addClef('treble').addTimeSignature('4/4');
+        }).addClef('treble');
 
         vf.draw();
 
-        // Resize SVG to fit content if possible
-        const requiredWidth = Math.max(800, notes.length * 40);
+        // Resize SVG to fit content
+        const requiredWidth = Math.max(800, voiceBeats * 50 + 50);
         const svg = div.querySelector('svg');
         if (svg) {
             svg.setAttribute('width', String(requiredWidth));

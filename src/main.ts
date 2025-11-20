@@ -401,20 +401,34 @@ if (playBtn) {
             return;
         }
 
+        // Ensure AudioContext is resumed on user gesture
+        await Tone.start();
+
         updateStatus("statusConverting");
-        const mml = convertTextToMML(text);
-        mmlOutput.textContent = mml;
 
-        // Render Sheet Music
-        const events = parseMML(mml);
-        sheetMusicRenderer.render(events);
+        // Use setTimeout to allow the UI to update "Converting..." before heavy work
+        setTimeout(async () => {
+            try {
+                const mml = convertTextToMML(text);
+                mmlOutput.textContent = mml;
 
-        updateStatus("statusPlaying");
-        document.body.classList.add('playing');
-        stopBtn.disabled = false;
-        if (downloadBtn) downloadBtn.disabled = false;
+                // Render Sheet Music
+                const events = parseMML(mml);
+                sheetMusicRenderer.render(events);
 
-        await player.play(mml);
+                updateStatus("statusPlaying");
+                document.body.classList.add('playing');
+                stopBtn.disabled = false;
+                if (downloadBtn) downloadBtn.disabled = false;
+
+                await player.play(mml);
+            } catch (e) {
+                console.error("Conversion or Playback Error:", e);
+                alert(`Error: ${e}`);
+                updateStatus("statusReady");
+                document.body.classList.remove('playing');
+            }
+        }, 50);
     });
 }
 
