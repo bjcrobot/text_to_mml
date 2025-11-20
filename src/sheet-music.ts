@@ -71,7 +71,7 @@ export class SheetMusicRenderer {
         const staveObj = vf.Stave({ x: 10, y: 40, width: requiredWidth - 20 });
         staveObj.addClef('treble');
         staveObj.addTimeSignature('4/4');
-        staveObj.setTempo({ bpm: tempo, name: 'BPM' }, 0);
+        staveObj.setTempo({ duration: 'q', bpm: tempo }, 0);
 
         const voice = vf.Voice().setStrict(false).addTickables(notes);
 
