@@ -8,6 +8,7 @@ const NOTES = ['c', 'c+', 'd', 'd+', 'e', 'f', 'f+', 'g', 'g+', 'a', 'a+', 'b'];
 export interface ConversionOptions {
     baseOctave?: number;
     baseSpeed?: number; // Not directly used in MML usually, but affects tempo choice
+    fixedTempo?: number;
 }
 
 export function convertTextToMML(text: string, _options: ConversionOptions = {}): string {
@@ -19,7 +20,8 @@ export function convertTextToMML(text: string, _options: ConversionOptions = {})
     // Default settings
     // t: tempo, v: volume, l: default length, o: octave
     // Starting with a standard tempo and volume
-    mml += "t120 v10 @0 ";
+    const initialTempo = _options.fixedTempo || 120;
+    mml += `t${initialTempo} v10 @0 `;
 
     for (const line of lines) {
         if (line.trim() === "") {
@@ -28,11 +30,14 @@ export function convertTextToMML(text: string, _options: ConversionOptions = {})
         }
 
         // Rule 5: Line length to Tempo
-        // Count bytes (approximate for JS string length vs byte length, but sufficient)
-        // Using simple length for now.
-        const lineLen = line.length;
-        const tempo = lineLen > 20 ? 100 : 180; // Slower for long lines, faster for short
-        mml += `t${tempo} `;
+        // Only apply if fixedTempo is NOT set
+        if (!_options.fixedTempo) {
+            // Count bytes (approximate for JS string length vs byte length, but sufficient)
+            // Using simple length for now.
+            const lineLen = line.length;
+            const tempo = lineLen > 20 ? 100 : 180; // Slower for long lines, faster for short
+            mml += `t${tempo} `;
+        }
 
         let i = 0;
         while (i < line.length) {

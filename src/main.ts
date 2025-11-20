@@ -107,9 +107,6 @@ class MMLPlayer {
         events.forEach(event => {
             if (event.type === 'tempo' && event.duration) {
                 // In parseMML, duration holds the BPM value for 'tempo' type
-                // But Tone.Transport.bpm is global, changing it mid-song is tricky with simple scheduling
-                // For simplicity, we'll just set it if it's at start, or we'd need automation.
-                // Let's just set it.
                 Tone.Transport.bpm.value = event.duration;
             }
             else if (event.type === 'note' && event.pitch && event.durationSec) {
@@ -249,6 +246,7 @@ const headerDesc = document.getElementById('header-desc') as HTMLParagraphElemen
 const mmlSummary = document.querySelector('summary') as HTMLElement;
 const langToggle = document.getElementById('lang-toggle') as HTMLButtonElement;
 const instrumentSelect = document.getElementById('instrument-select') as HTMLSelectElement;
+const tempoInput = document.getElementById('tempo-input') as HTMLInputElement;
 
 // --- Localization ---
 
@@ -409,12 +407,18 @@ if (playBtn) {
         // Use setTimeout to allow the UI to update "Converting..." before heavy work
         setTimeout(async () => {
             try {
-                const mml = convertTextToMML(text);
+                const fixedTempo = tempoInput && tempoInput.value ? parseInt(tempoInput.value, 10) : undefined;
+                const mml = convertTextToMML(text, { fixedTempo });
                 mmlOutput.textContent = mml;
 
                 // Render Sheet Music
                 const events = parseMML(mml);
-                sheetMusicRenderer.render(events);
+                // Pass tempo to renderer. If fixedTempo is set, use it. 
+                // Otherwise, default to 120 or whatever mml-parser found?
+                // Since we are not passing the parsed tempo back from convertTextToMML easily without parsing,
+                // we'll just use fixedTempo or 120.
+                const displayTempo = fixedTempo || 120;
+                sheetMusicRenderer.render(events, displayTempo);
 
                 updateStatus("statusPlaying");
                 document.body.classList.add('playing');
