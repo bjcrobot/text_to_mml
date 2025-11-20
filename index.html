@@ -30,13 +30,50 @@
         <textarea id="text-input" placeholder="ここにテキストを入力してください（例：青空文庫の文章など）..."></textarea>
       </div>
 
-      <div class="controls">
-        <button id="play-btn" class="primary-btn">
-          <span class="icon">▶</span> 再生 / 変換
-        </button>
-        <button id="pause-btn" class="secondary-btn" disabled>
-          <span class="icon">⏸</span> 一時停止
-        </button>
+      <div class="output-section">
+        <div class="status-display">
+          <span id="status-text">Ready</span>
+        </div>
+
+        <div class="controls">
+          <div class="control-group"
+            style="display: flex; gap: 10px; margin-bottom: 10px; justify-content: center; flex-wrap: wrap;">
+            <select id="instrument-select" class="secondary-btn" style="padding: 0.5rem 1rem;">
+              <!-- Options populated by JS -->
+            </select>
+
+            <div class="tempo-control" style="display: flex; align-items: center; gap: 5px;">
+              <label for="tempo-input" style="font-family: var(--font-main); color: var(--text-secondary);">BPM:</label>
+              <input type="number" id="tempo-input" min="40" max="200" step="10" list="tempo-options" placeholder="Auto"
+                style="padding: 0.5rem; border-radius: 8px; border: 1px solid #334155; background: var(--card-bg); color: var(--text-primary); width: 80px;">
+              <datalist id="tempo-options">
+                <option value="60"></option>
+                <option value="80"></option>
+                <option value="100"></option>
+                <option value="120"></option>
+                <option value="140"></option>
+                <option value="160"></option>
+                <option value="180"></option>
+              </datalist>
+            </div>
+          </div>
+
+          <div class="button-group" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <button id="play-btn" class="primary-btn">
+              <span class="icon">▶</span> 再生 / 変換
+            </button>
+            <button id="pause-btn" class="secondary-btn" disabled>
+              <span class="icon">⏸</span> 一時停止
+            </button>
+            <button id="stop-btn" class="secondary-btn" disabled>
+              <span class="icon">■</span> 停止
+            </button>
+            <button id="download-btn" class="secondary-btn" disabled>
+              <span class="icon">⬇</span> MIDI保存
+            </button>
+          </div>
+        </div>
+
         <div class="visualizer">
           <div class="bar"></div>
           <div class="bar"></div>
@@ -44,7 +81,9 @@
           <div class="bar"></div>
           <div class="bar"></div>
         </div>
+
         <div id="sheet-music" style="overflow-x: auto; white-space: nowrap; margin: 20px 0; text-align: center;"></div>
+
         <details>
           <summary>生成されたMMLを見る</summary>
           <pre id="mml-output"></pre>
