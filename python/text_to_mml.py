@@ -5,6 +5,15 @@ from midiutil import MIDIFile
 
 NOTES = ["c", "c+", "d", "d+", "e", "f", "f+", "g", "g+", "a", "a+", "b"]
 
+INSTRUMENTS = {
+    'piano': 1,      # Acoustic Grand Piano
+    'chiptune': 81,  # Lead 1 (square)
+    'strings': 49,   # String Ensemble 1
+    'flute': 74,     # Flute
+    'guitar': 25,    # Acoustic Guitar (nylon)
+    'lead': 82       # Lead 2 (sawtooth)
+}
+
 def get_char_type(char):
     # Hiragana: 0x3040 - 0x309F
     if '\u3040' <= char <= '\u309f':
@@ -31,13 +40,8 @@ def convert_text_to_mml(text):
 
         # Rule 5: Line length to Tempo
         length = len(line)
-        tempo = 120
-        if length < 10:
-            tempo = 180
-        elif length > 30:
-            tempo = 100
-        else:
-            tempo = 120
+        # Match Web version: > 20 chars -> 100 BPM, else 180 BPM
+        tempo = 100 if length > 20 else 180
         
         mml += f"t{tempo} "
 
@@ -92,7 +96,7 @@ def convert_text_to_mml(text):
 
     return mml.strip()
 
-def save_as_midi(mml, filename):
+def save_as_midi(mml, filename, program_change=1):
     midi = MIDIFile(1)  # One track
     track = 0
     time = 0    # In beats
@@ -101,6 +105,7 @@ def save_as_midi(mml, filename):
 
     midi.addTrackName(track, time, "TextToMML Track")
     midi.addTempo(track, time, 120)
+    midi.addProgramChange(track, channel, time, program_change)
 
     tokens = mml.split()
     
@@ -186,6 +191,7 @@ def main():
     parser.add_argument('file', nargs='?', help='Input text file path')
     parser.add_argument('--gui', action='store_true', help='Launch GUI (Not implemented yet)')
     parser.add_argument('--midi', '-m', help='Output MIDI file path')
+    parser.add_argument('--instrument', '-i', choices=INSTRUMENTS.keys(), default='piano', help='Select instrument (default: piano)')
     
     args = parser.parse_args()
 
@@ -217,7 +223,8 @@ def main():
         print(mml)
         
         if args.midi:
-            save_as_midi(mml, args.midi)
+            program_change = INSTRUMENTS.get(args.instrument, 1)
+            save_as_midi(mml, args.midi, program_change)
 
 if __name__ == "__main__":
     main()

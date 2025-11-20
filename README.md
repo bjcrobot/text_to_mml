@@ -49,13 +49,20 @@ cd python
 **基本（MML出力）:**
 
 ```bash
-python converter.py sample.txt
+python text_to_mml.py input.txt
 ```
 
 **MIDIファイルのエクスポート:**
 
 ```bash
-python converter.py sample.txt --midi output.mid
+python text_to_mml.py input.txt --midi output.mid
+```
+
+**楽器選択:**
+
+```bash
+# Options: piano, chiptune, strings, flute, guitar, lead
+python text_to_mml.py input.txt --midi output.mid --instrument chiptune
 ```
 
 ### 依存ライブラリ
