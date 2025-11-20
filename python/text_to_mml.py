@@ -36,6 +36,7 @@ def convert_text_to_mml(text):
     for line in lines:
         line = line.strip()
         if not line:
+            mml += "r4 "
             continue
 
         # Rule 5: Line length to Tempo
@@ -47,52 +48,52 @@ def convert_text_to_mml(text):
 
         i = 0
         while i < len(line):
-            char = line[i]
-            
-            # Rule 3: Punctuation to Rest
-            if char in ["、", ",", "，"]:
-                mml += "r16 "
-                i += 1
-                continue
-            if char in ["。", ".", "．", "！", "!", "？", "?"]:
-                mml += "r4 "
-                i += 1
-                continue
-            
-            # Rule 4: Repetition to Duration
-            repeat_count = 1
-            while i + repeat_count < len(line) and line[i + repeat_count] == char:
-                repeat_count += 1
-            
-            duration = "8" # Default l8
-            if repeat_count >= 4:
-                duration = "1"
-            elif repeat_count == 3:
-                duration = "2"
-            elif repeat_count == 2:
-                duration = "4"
+            char1 = line[i]
+            char2 = line[i+1] if i + 1 < len(line) else None
+
+            # --- Char 1: Pitch & Octave ---
             
             # Rule 2: Character Type to Octave
-            char_type = get_char_type(char)
             octave = 4
-            if char_type == 'hiragana':
-                octave = 5
-            elif char_type == 'katakana':
-                octave = 4
-            elif char_type == 'kanji':
-                octave = 3
-            else:
-                octave = 4
+            ctype = get_char_type(char1)
+            if ctype == 'hiragana': octave = 5
+            elif ctype == 'katakana': octave = 4
+            elif ctype == 'kanji': octave = 3
+            else: octave = 4
 
-            # Rule 1: Character Code to Note
-            code = ord(char)
-            note_index = code % 12
+            # Rule 1: Character Code to Pitch
+            code1 = ord(char1)
+            note_index = code1 % 12
             note = NOTES[note_index]
 
-            # Construct MML token (Space separated)
-            mml += f"o{octave} {note}{duration} "
+            # --- Char 2: Duration & Rest ---
+            duration = "4" # Default
+            is_rest = False
 
-            i += repeat_count
+            if char2:
+                code2 = ord(char2)
+                rhythm_type = code2 % 8
+                
+                if rhythm_type == 0: duration = "16"
+                elif rhythm_type == 1: duration = "8"
+                elif rhythm_type == 2: duration = "8"
+                elif rhythm_type == 3: duration = "4"
+                elif rhythm_type == 4: duration = "2"
+                elif rhythm_type == 5: duration = "8."
+                elif rhythm_type == 6: 
+                    is_rest = True
+                    duration = "8"
+                elif rhythm_type == 7: 
+                    is_rest = True
+                    duration = "4"
+
+            # Construct MML token
+            if is_rest:
+                mml += f"r{duration} "
+            else:
+                mml += f"o{octave} {note}{duration} "
+
+            i += 2
 
     return mml.strip()
 

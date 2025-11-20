@@ -36,53 +36,59 @@ export function convertTextToMML(text: string, _options: ConversionOptions = {})
 
         let i = 0;
         while (i < line.length) {
-            const char = line[i];
+            const char1 = line[i];
+            const char2 = (i + 1 < line.length) ? line[i + 1] : null;
 
-            // Rule 3: Punctuation
-            if (char === '、' || char === ',') {
-                mml += "r16 ";
-                i++;
-                continue;
-            }
-            if (char === '。' || char === '.') {
-                mml += "r4 ";
-                i++;
-                continue;
-            }
+            // Skip punctuation rules for now to prioritize the new rhythm logic, 
+            // or integrate them? The user wants "2-char chunk" logic.
+            // Let's stick to the pure 2-char logic for musicality as requested, 
+            // but maybe keep basic punctuation as rests if they appear as char1?
+            // Actually, the previous punctuation rule might conflict. 
+            // Let's treat punctuation as just another character for generating rhythm 
+            // to keep it simple and consistent with the "deterministic" goal.
 
-            // Rule 4: Repetition
-            // Check how many times this char repeats
-            let repeatCount = 1;
-            while (i + repeatCount < line.length && line[i + repeatCount] === char) {
-                repeatCount++;
-            }
-
-            // Determine Note Length based on repetition
-            // Default l8. If repeats, make it longer.
-            // 1 -> 8, 2 -> 4, 3 -> 2, 4+ -> 1
-            let duration = "8";
-            if (repeatCount === 2) duration = "4";
-            else if (repeatCount === 3) duration = "2";
-            else if (repeatCount >= 4) duration = "1";
+            // --- Char 1: Pitch & Octave ---
 
             // Rule 2: Character Type to Octave
-            // Hiragana: o5, Katakana: o4, Kanji: o3, Others: o4
             let octave = 4;
-            if (isHiragana(char)) octave = 5;
-            else if (isKatakana(char)) octave = 4;
-            else if (isKanji(char)) octave = 3;
-            else octave = 4; // Default
+            if (isHiragana(char1)) octave = 5;
+            else if (isKatakana(char1)) octave = 4;
+            else if (isKanji(char1)) octave = 3;
+            else octave = 4;
 
             // Rule 1: Character Code to Pitch
-            // Use Unicode code point % 12
-            const code = char.codePointAt(0) || 0;
-            const noteIndex = code % 12;
+            const code1 = char1.codePointAt(0) || 0;
+            const noteIndex = code1 % 12;
             const note = NOTES[noteIndex];
 
-            // Construct MML token
-            mml += `o${octave} ${note}${duration} `;
+            // --- Char 2: Duration & Rest ---
+            let duration = "4"; // Default if no char2
+            let isRest = false;
 
-            i += repeatCount;
+            if (char2) {
+                const code2 = char2.codePointAt(0) || 0;
+                const rhythmType = code2 % 8;
+
+                switch (rhythmType) {
+                    case 0: duration = "16"; break;
+                    case 1: duration = "8"; break;
+                    case 2: duration = "8"; break;
+                    case 3: duration = "4"; break;
+                    case 4: duration = "2"; break;
+                    case 5: duration = "8."; break;
+                    case 6: isRest = true; duration = "8"; break;
+                    case 7: isRest = true; duration = "4"; break;
+                }
+            }
+
+            // Construct MML token
+            if (isRest) {
+                mml += `r${duration} `;
+            } else {
+                mml += `o${octave} ${note}${duration} `;
+            }
+
+            i += 2;
         }
     }
 
