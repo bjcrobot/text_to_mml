@@ -1,95 +1,129 @@
 import * as Tone from 'tone';
 import { convertTextToMML } from './converter';
+import { parseMML } from './mml-parser';
+import { SheetMusicRenderer } from './sheet-music';
 // @ts-ignore
 import MidiWriter from 'midi-writer-js';
+
+// --- Instrument Definitions ---
+
+type InstrumentType = 'piano' | 'chiptune' | 'strings' | 'flute' | 'guitar' | 'lead';
+
+interface InstrumentPreset {
+    nameKey: string;
+    programChange: number; // MIDI Program Change number (1-128)
+    createSynth: () => Tone.PolySynth;
+}
+
+const instrumentPresets: Record<InstrumentType, InstrumentPreset> = {
+    piano: {
+        nameKey: 'piano',
+        programChange: 1, // Acoustic Grand Piano
+        createSynth: () => new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'triangle' },
+            envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 1 }
+        }).toDestination()
+    },
+    chiptune: {
+        nameKey: 'chiptune',
+        programChange: 81, // Lead 1 (square)
+        createSynth: () => new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'square' },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.5, release: 0.1 }
+        }).toDestination()
+    },
+    strings: {
+        nameKey: 'strings',
+        programChange: 49, // String Ensemble 1
+        createSynth: () => new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'fmsawtooth' },
+            envelope: { attack: 0.5, decay: 0.5, sustain: 0.8, release: 1.5 }
+        }).toDestination()
+    },
+    flute: {
+        nameKey: 'flute',
+        programChange: 74, // Flute
+        createSynth: () => new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'triangle' },
+            envelope: { attack: 0.1, decay: 0.1, sustain: 0.8, release: 0.5 }
+        }).toDestination()
+    },
+    guitar: {
+        nameKey: 'guitar',
+        programChange: 25, // Acoustic Guitar (nylon)
+        createSynth: () => new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sawtooth' },
+            envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.5 } // Pluck-ish
+        }).toDestination()
+    },
+    lead: {
+        nameKey: 'lead',
+        programChange: 82, // Lead 2 (sawtooth)
+        createSynth: () => new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sawtooth' },
+            envelope: { attack: 0.01, decay: 0.1, sustain: 0.8, release: 0.5 }
+        }).toDestination()
+    }
+};
 
 // --- Tone.js MML Parser Helper ---
 
 class MMLPlayer {
     private synth: Tone.PolySynth | null = null;
+    private currentInstrument: InstrumentType = 'piano';
 
     constructor() {
-        // Lazy initialization to avoid AudioContext warning
+        // Lazy initialization
+    }
+
+    setInstrument(type: InstrumentType) {
+        this.currentInstrument = type;
+        if (this.synth) {
+            this.synth.releaseAll();
+            this.synth.dispose();
+            this.synth = null;
+        }
     }
 
     async play(mml: string) {
         await Tone.start();
 
         if (!this.synth) {
-            this.synth = new Tone.PolySynth(Tone.Synth).toDestination();
+            this.synth = instrumentPresets[this.currentInstrument].createSynth();
         }
 
         this.stopAudio(); // Ensure clean state without resetting UI
 
-        const tokens = mml.split(/\s+/);
+        const events = parseMML(mml);
 
         // Reset Transport
         Tone.Transport.stop();
         Tone.Transport.cancel();
         Tone.Transport.position = 0;
-        Tone.Transport.bpm.value = 120; // Keep Transport BPM constant as we calculate seconds manually
+        Tone.Transport.bpm.value = 120; // Default
 
-        let currentOctave = 4;
-        let currentDurationVal = 8; // default 8th note (denominator)
-        let currentBpm = 120;
         let accumulatedTime = 0; // in seconds
 
-        tokens.forEach(token => {
-            if (!token) return;
-            const cmd = token.charAt(0).toLowerCase();
-            const valStr = token.slice(1);
-            const val = parseInt(valStr);
-
-            if (cmd === 't') {
-                // Tempo change
-                if (!isNaN(val) && val > 0) {
-                    currentBpm = val;
-                }
+        events.forEach(event => {
+            if (event.type === 'tempo' && event.duration) {
+                // In parseMML, duration holds the BPM value for 'tempo' type
+                // But Tone.Transport.bpm is global, changing it mid-song is tricky with simple scheduling
+                // For simplicity, we'll just set it if it's at start, or we'd need automation.
+                // Let's just set it.
+                Tone.Transport.bpm.value = event.duration;
             }
-            else if (cmd === 'o') {
-                if (!isNaN(val)) currentOctave = val;
-            }
-            else if (cmd === 'l') {
-                if (!isNaN(val)) currentDurationVal = val;
-            }
-            else if (cmd === 'v') {
-                // Volume - ignore for now
-            }
-            else if (cmd === 'r') {
-                // Rest
-                const durVal = valStr ? parseInt(valStr) : currentDurationVal;
-                const beatCount = 4 / durVal; // 4/4 = 1 beat, 4/8 = 0.5 beat
-                const durationSec = beatCount * (60 / currentBpm);
-                accumulatedTime += durationSec;
-            }
-            else if (['c', 'd', 'e', 'f', 'g', 'a', 'b'].includes(cmd)) {
-                // Note
-                let note = cmd.toUpperCase();
-                let rest = valStr;
+            else if (event.type === 'note' && event.pitch && event.durationSec) {
+                const fullNote = event.pitch;
+                const durationSec = event.durationSec;
 
-                // Handle sharp/flat
-                if (rest.startsWith('+') || rest.startsWith('#')) {
-                    note += '#';
-                    rest = rest.slice(1);
-                } else if (rest.startsWith('-')) {
-                    note += 'b';
-                    rest = rest.slice(1);
-                }
-
-                // Handle duration
-                const durVal = rest ? parseInt(rest) : currentDurationVal;
-                const beatCount = 4 / durVal;
-                const durationSec = beatCount * (60 / currentBpm);
-
-                // Full note name
-                const fullNote = `${note}${currentOctave}`;
-
-                // Schedule on Transport
                 Tone.Transport.schedule((time) => {
                     this.synth?.triggerAttackRelease(fullNote, durationSec, time);
                 }, accumulatedTime);
 
                 accumulatedTime += durationSec;
+            }
+            else if (event.type === 'rest' && event.durationSec) {
+                accumulatedTime += event.durationSec;
             }
         });
 
@@ -125,76 +159,28 @@ class MMLPlayer {
 
     downloadMidi(mml: string) {
         const track = new MidiWriter.Track();
-        track.addEvent(new MidiWriter.ProgramChangeEvent({ instrument: 1 }));
+        const programChange = instrumentPresets[this.currentInstrument].programChange;
+        track.addEvent(new MidiWriter.ProgramChangeEvent({ instrument: programChange }));
 
-        const tokens = mml.split(/\s+/);
-
-        let currentOctave = 4;
-        let currentDurationVal = 8;
-        let currentBpm = 120;
+        const events = parseMML(mml);
 
         // Initial Tempo
-        track.setTempo(currentBpm);
+        track.setTempo(120);
 
-        tokens.forEach(token => {
-            if (!token) return;
-            const cmd = token.charAt(0).toLowerCase();
-            const valStr = token.slice(1);
-            const val = parseInt(valStr);
-
-            if (cmd === 't') {
-                if (!isNaN(val) && val > 0) {
-                    currentBpm = val;
-                    track.setTempo(val);
-                }
+        events.forEach(event => {
+            if (event.type === 'tempo' && event.duration) {
+                track.setTempo(event.duration);
             }
-            else if (cmd === 'o') {
-                if (!isNaN(val)) currentOctave = val;
-            }
-            else if (cmd === 'l') {
-                if (!isNaN(val)) currentDurationVal = val;
-            }
-            else if (cmd === 'r') {
-                // Rest
-                // MidiWriter uses 'wait' events or just note durations. 
-                // Ideally we use a wait event or a silent note.
-                // MidiWriter doesn't have explicit Rest, but we can use wait on the next note.
-                // Or we can add a NoteEvent with velocity 0 or empty pitch?
-                // Actually, MidiWriter tracks accumulate time. We can just add a 'wait' to the track?
-                // No, MidiWriter events have 'duration'.
-                // Let's use a workaround: NoteEvent with wait property?
-                // Or just skip adding an event? No, that would skip time.
-                // MidiWriter has `track.addEvent(new MidiWriter.NoteEvent({pitch: [], duration: '4'}))`
-                // If pitch is empty, is it a rest?
-                // Documentation says: "To create a rest, pass an empty array for pitch."
-
-                const durVal = valStr ? valStr : String(currentDurationVal);
-                // midi-writer expects duration like '4', '8', '16'.
-                // Our valStr might be '4', '8'.
-
+            else if (event.type === 'note' && event.pitch && event.duration) {
                 track.addEvent(new MidiWriter.NoteEvent({
-                    pitch: [],
-                    duration: durVal
+                    pitch: [event.pitch],
+                    duration: String(event.duration)
                 }));
             }
-            else if (['c', 'd', 'e', 'f', 'g', 'a', 'b'].includes(cmd)) {
-                let note = cmd.toUpperCase();
-                let rest = valStr;
-
-                if (rest.startsWith('+') || rest.startsWith('#')) {
-                    note += '#';
-                    rest = rest.slice(1);
-                } else if (rest.startsWith('-')) {
-                    note += 'b';
-                    rest = rest.slice(1);
-                }
-
-                const durVal = rest ? rest : String(currentDurationVal);
-                const fullNote = `${note}${currentOctave}`;
-
+            else if (event.type === 'rest' && event.duration) {
                 track.addEvent(new MidiWriter.NoteEvent({
-                    pitch: [fullNote],
-                    duration: durVal
+                    pitch: [],
+                    duration: String(event.duration)
                 }));
             }
         });
@@ -249,6 +235,8 @@ class MMLPlayer {
 // --- UI Logic ---
 
 const player = new MMLPlayer();
+const sheetMusicRenderer = new SheetMusicRenderer('sheet-music');
+
 const textInput = document.getElementById('text-input') as HTMLTextAreaElement;
 const playBtn = document.getElementById('play-btn') as HTMLButtonElement;
 const pauseBtn = document.getElementById('pause-btn') as HTMLButtonElement;
@@ -260,6 +248,7 @@ const headerTitle = document.getElementById('header-title') as HTMLHeadingElemen
 const headerDesc = document.getElementById('header-desc') as HTMLParagraphElement;
 const mmlSummary = document.querySelector('summary') as HTMLElement;
 const langToggle = document.getElementById('lang-toggle') as HTMLButtonElement;
+const instrumentSelect = document.getElementById('instrument-select') as HTMLSelectElement;
 
 // --- Localization ---
 
@@ -280,7 +269,15 @@ const translations = {
         mmlSummary: "生成されたMMLを見る",
         alertInput: "テキストを入力してください",
         alertPlayFirst: "まずは再生/変換を行ってください",
-        toggleLabel: "🌐 English"
+        toggleLabel: "🌐 English",
+        instruments: {
+            piano: "🎹 ピアノ",
+            chiptune: "👾 チップチューン",
+            strings: "🎻 ストリングス",
+            flute: "🎷 フルート",
+            guitar: "🎸 ギター",
+            lead: "⚡ リード"
+        }
     },
     en: {
         title: "Text to MML Music Converter",
@@ -298,7 +295,15 @@ const translations = {
         mmlSummary: "View generated MML",
         alertInput: "Please enter some text.",
         alertPlayFirst: "Please play/convert first.",
-        toggleLabel: "🌐 日本語"
+        toggleLabel: "🌐 日本語",
+        instruments: {
+            piano: "🎹 Piano",
+            chiptune: "👾 Chiptune",
+            strings: "🎻 Strings",
+            flute: "🎷 Flute",
+            guitar: "🎸 Guitar",
+            lead: "⚡ Lead"
+        }
     }
 };
 
@@ -332,6 +337,23 @@ function applyTranslations() {
     if (statusText && statusText.textContent === 'Ready') statusText.textContent = t.statusReady;
     if (mmlSummary) mmlSummary.textContent = t.mmlSummary;
     if (langToggle) langToggle.textContent = t.toggleLabel;
+
+    // Update Instrument Select Options
+    if (instrumentSelect) {
+        const currentVal = instrumentSelect.value;
+        instrumentSelect.innerHTML = ''; // Clear existing
+        (Object.keys(instrumentPresets) as InstrumentType[]).forEach(key => {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = t.instruments[key];
+            instrumentSelect.appendChild(option);
+        });
+        if (currentVal) {
+            instrumentSelect.value = currentVal;
+        } else {
+            instrumentSelect.value = 'piano';
+        }
+    }
 }
 
 // Initial detection
@@ -348,6 +370,14 @@ if (langToggle) {
     langToggle.addEventListener('click', () => {
         currentLang = currentLang === 'ja' ? 'en' : 'ja';
         applyTranslations();
+    });
+}
+
+// Instrument Change
+if (instrumentSelect) {
+    instrumentSelect.addEventListener('change', (e) => {
+        const val = (e.target as HTMLSelectElement).value as InstrumentType;
+        player.setInstrument(val);
     });
 }
 
@@ -374,6 +404,10 @@ if (playBtn) {
         updateStatus("statusConverting");
         const mml = convertTextToMML(text);
         mmlOutput.textContent = mml;
+
+        // Render Sheet Music
+        const events = parseMML(mml);
+        sheetMusicRenderer.render(events);
 
         updateStatus("statusPlaying");
         document.body.classList.add('playing');

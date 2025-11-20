@@ -43,6 +43,9 @@
         <button id="download-btn" class="secondary-btn" disabled>
           <span class="icon">⬇</span> MIDI保存
         </button>
+        <select id="instrument-select" class="secondary-btn" style="padding: 0.5rem;">
+          <!-- Options will be populated by JS -->
+        </select>
       </div>
 
       <div class="output-section">
@@ -56,6 +59,7 @@
           <div class="bar"></div>
           <div class="bar"></div>
         </div>
+        <div id="sheet-music" style="overflow-x: auto; white-space: nowrap; margin: 20px 0; text-align: center;"></div>
         <details>
           <summary>生成されたMMLを見る</summary>
           <pre id="mml-output"></pre>
