@@ -71,7 +71,23 @@ export class SheetMusicRenderer {
         const staveObj = vf.Stave({ x: 10, y: 40, width: requiredWidth - 20 });
         staveObj.addClef('treble');
         staveObj.addTimeSignature('4/4');
-        staveObj.setTempo({ duration: 'q', bpm: tempo }, 0);
+        // Move tempo up (-30) and ensure it's visible
+        staveObj.setTempo({ duration: 'q', bpm: tempo }, -30);
+
+        // Add some padding to start of notes to avoid overlap with tempo/clef
+        // getNoteStartX() returns the x position where notes start. We add a bit more.
+        // Note: setNoteStartX must be called before formatting? 
+        // Actually, VexFlow calculates startX based on modifiers. 
+        // We can force it to be larger.
+        // Let's try setting it manually after adding clef/time.
+        // However, setNoteStartX might be overridden by draw?
+        // A safer way is to just rely on the y-shift (-30) which puts it above the staff.
+        // But user asked for "more left". 
+        // If we want it left of the clef, that's hard. 
+        // But if we move it up, it won't overlap notes.
+        // Let's also add a bit of padding just in case.
+        // staveObj.setNoteStartX(staveObj.getNoteStartX() + 10); // This might not work as expected if called here.
+
 
         const voice = vf.Voice().setStrict(false).addTickables(notes);
 

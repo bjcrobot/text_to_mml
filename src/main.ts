@@ -407,7 +407,8 @@ if (playBtn) {
         // Use setTimeout to allow the UI to update "Converting..." before heavy work
         setTimeout(async () => {
             try {
-                const fixedTempo = tempoInput && tempoInput.value ? parseInt(tempoInput.value, 10) : undefined;
+                const tempoVal = tempoInput && tempoInput.value ? tempoInput.value : '';
+                const fixedTempo = (tempoVal === '' || tempoVal.toLowerCase() === 'auto') ? undefined : parseInt(tempoVal, 10);
                 const mml = convertTextToMML(text, { fixedTempo });
                 mmlOutput.textContent = mml;
 
