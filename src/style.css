@@ -76,6 +76,7 @@ header p {
   display: flex;
   justify-content: center;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 button {
@@ -150,11 +151,30 @@ button {
   animation-play-state: paused;
 }
 
-.bar:nth-child(1) { height: 40%; animation-delay: 0s; }
-.bar:nth-child(2) { height: 70%; animation-delay: 0.1s; }
-.bar:nth-child(3) { height: 100%; animation-delay: 0.2s; }
-.bar:nth-child(4) { height: 60%; animation-delay: 0.3s; }
-.bar:nth-child(5) { height: 30%; animation-delay: 0.4s; }
+.bar:nth-child(1) {
+  height: 40%;
+  animation-delay: 0s;
+}
+
+.bar:nth-child(2) {
+  height: 70%;
+  animation-delay: 0.1s;
+}
+
+.bar:nth-child(3) {
+  height: 100%;
+  animation-delay: 0.2s;
+}
+
+.bar:nth-child(4) {
+  height: 60%;
+  animation-delay: 0.3s;
+}
+
+.bar:nth-child(5) {
+  height: 30%;
+  animation-delay: 0.4s;
+}
 
 body.playing .bar {
   animation-play-state: running;
@@ -183,8 +203,17 @@ pre {
 }
 
 @keyframes bounce {
-  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
-  50% { transform: scaleY(1); opacity: 1; }
+
+  0%,
+  100% {
+    transform: scaleY(0.5);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
 }
 
 #sheet-music {
