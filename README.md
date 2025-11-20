@@ -1,4 +1,4 @@
-# Text to Music Converter
+# Text to MML Music Converter
 
 テキストを解析して音楽（MML: Music Macro Language）に変換し、再生するツールです。
 Webアプリケーション版と、コマンドラインで動作するPythonスクリプト版があります。

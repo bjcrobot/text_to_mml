@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Text to Music Converter</title>
+  <title>Text to MML Music Converter</title>
   <link rel="stylesheet" href="./src/style.css" />
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,8 +18,11 @@
 <body>
   <div id="app">
     <header>
-      <h1>Text to Music Converter</h1>
-      <p>テキストを音楽（MML）に変換して再生します</p>
+      <h1 id="header-title">Text to MML Music Converter</h1>
+      <p id="header-desc">テキストを音楽（MML）に変換して再生します</p>
+      <button id="lang-toggle" class="secondary-btn" style="margin-top: 10px; font-size: 0.8rem;">
+        🌐 English
+      </button>
     </header>
 
     <main>
@@ -36,6 +39,9 @@
         </button>
         <button id="stop-btn" class="secondary-btn" disabled>
           <span class="icon">■</span> 停止
+        </button>
+        <button id="download-btn" class="secondary-btn" disabled>
+          <span class="icon">⬇</span> MIDI保存
         </button>
       </div>
 

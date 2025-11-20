@@ -1,0 +1,20 @@
+- [x] Project Setup
+    - [x] Initialize Vite project with TypeScript
+    - [x] Install Tone.js
+- [x] Implementation
+    - [x] Create basic UI (Textarea, Buttons)
+    - [x] Implement Text-to-MML conversion logic
+        - [x] Rule 1: Character Code to Note
+        - [x] Rule 2: Character Type to Octave
+        - [x] Rule 3: Punctuation to Rest
+        - [x] Rule 4: Repetition to Duration
+        - [x] Rule 5: Line Length to Tempo
+    - [x] Implement Audio Playback (MML -> Tone.js)
+    - [x] Implement Pause/Resume
+- [x] Verification
+    - [x] Test with sample text (e.g., Aozora Bunko snippet)
+    - [x] Adjust conversion rules for better musicality
+- [ ] Python Version
+    - [x] Create converter.py (CLI support)
+    - [x] Implement MML to MIDI conversion
+    - [ ] Implement GUI (optional)
